@@ -1,75 +1,52 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/tauri";
 import Image from "next/image";
 import reactLogo from "../assets/react.svg";
 import tauriLogo from "../assets/tauri.svg";
 import nextLogo from "../assets/next.svg";
+import Link from "next/link";
+
+type BootPayload = {
+  drives: string[];
+};
 
 function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+  const [bootPayload, setBootPayload] = useState<BootPayload>();
+  const [dirs, setDirs] = useState<string[]>();
+  const [cnt, setCnt] = useState<number>(0);
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
-    setGreetMsg(await invoke("greet", { name }));
-  }
+  useEffect(() => {
+    invoke("start", { name: "bla" }).then((payload: BootPayload) => {
+      setBootPayload(payload);
+    });
+  }, []);
+
+  const handleScanDrive = (index) => () => {
+    invoke("change_drive", { chgNum: index }).then((result) => {
+      console.log({ result });
+      invoke("scan_dir").then((_dirs: string[]) => {
+        setDirs(_dirs);
+        invoke("count_sub_dir").then((_cnt: number) => {
+          setCnt(_cnt);
+        });
+      });
+    });
+  };
 
   return (
     <div className="container">
-      <h1>Welcome to Tauri!</h1>
-
-      <div className="row">
-        <span className="logos">
-          <a href="https://nextjs.org" target="_blank">
-            <Image
-              width={144}
-              height={144}
-              src={nextLogo}
-              className="logo next"
-              alt="Next logo"
-            />
-          </a>
-        </span>
-        <span className="logos">
-          <a href="https://tauri.app" target="_blank">
-            <Image
-              width={144}
-              height={144}
-              src={tauriLogo}
-              className="logo tauri"
-              alt="Tauri logo"
-            />
-          </a>
-        </span>
-        <span className="logos">
-          <a href="https://reactjs.org" target="_blank">
-            <Image
-              width={144}
-              height={144}
-              src={reactLogo}
-              className="logo react"
-              alt="React logo"
-            />
-          </a>
-        </span>
+      <div className="info">
+        {bootPayload &&
+          bootPayload.drives.map((drive, index) => (
+            <button onClick={handleScanDrive(index)}>{drive}</button>
+          ))}
       </div>
-
-      <p>Click on the Tauri, Next, and React logos to learn more.</p>
-
-      <div className="row">
-        <div>
-          <input
-            id="greet-input"
-            onChange={(e) => setName(e.currentTarget.value)}
-            placeholder="Enter a name..."
-          />
-          <button type="button" onClick={() => greet()}>
-            Greet
-          </button>
-        </div>
+      <div className="imageview">
+        <img className="img-preview" src="" />
       </div>
-
-      <p>{greetMsg}</p>
+      <div className="list">
+        {dirs && dirs.map((dir) => <button>{dir}</button>)}
+      </div>
     </div>
   );
 }
